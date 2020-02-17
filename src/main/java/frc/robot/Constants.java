@@ -18,4 +18,31 @@ package frc.robot;
  * wherever the constants are needed, to reduce verbosity.
  */
 public final class Constants {
+  // PWM
+  public static final int DRIVE_LEFT_FRONT = 0;
+  public static final int DRIVE_LEFT_BACK = 1;
+  public static final int DRIVE_RIGHT_FRONT = 2;
+  public static final int DRIVE_RIGHT_BACK = 3;
+  public static final int HOPPER_LEFT = 4;
+  public static final int HOPPER_RIGHT = 5;
+  public static final int CLIMB_HOOK_WINCH = 6;
+  public static final int CLIMB_WINCH_LEFT = 7;
+  public static final int CLIMB_WINCH_RIGHT = 8;
+  public static final int CONVEYOR = 9;
+
+  // CAN
+  public static final int SHOOTER_LEFT = 0;
+  public static final int SHOOTER_RIGHT = 1;
+  public static final int INTAKE = 2;
+
+  // USB
+  public static final int JOYSTICK_LEFT = 0;
+  public static final int JOYSTICK_RIGHT = 1;
+  public static final int XBOX = 3;
+
+  // DIO
+  public static final int ENCODER_LEFT_1 = 0;
+  public static final int ENCODER_LEFT_2 = 1;
+  public static final int ENCODER_RIGHT_1 = 2;
+  public static final int ENCODER_RIGHT_2 = 3;
 }
