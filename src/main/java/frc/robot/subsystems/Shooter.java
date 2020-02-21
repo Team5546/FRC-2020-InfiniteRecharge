@@ -32,6 +32,8 @@ public class Shooter extends SubsystemBase {
 
     left = new CANSparkMax(Constants.SHOOTER_LEFT, MotorType.kBrushless);
     right = new CANSparkMax(Constants.SHOOTER_RIGHT, MotorType.kBrushless);
+    left.setClosedLoopRampRate(2);
+    right.setClosedLoopRampRate(2);
 
     leftEncoder = left.getEncoder();
     rightEncoder = right.getEncoder();
