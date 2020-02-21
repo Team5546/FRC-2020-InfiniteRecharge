@@ -10,8 +10,15 @@ package frc.robot;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.XboxController.Button;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import frc.robot.commands.hopper.Feed;
+import frc.robot.commands.vision.VisionTarget;
 import frc.robot.subsystems.DriveTrain;
+import frc.robot.subsystems.Hopper;
+import frc.robot.subsystems.Shooter;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -25,9 +32,13 @@ public class RobotContainer {
   private final Joystick leftStick = new Joystick(Constants.JOYSTICK_LEFT);
   private final Joystick rightStick = new Joystick(Constants.JOYSTICK_RIGHT);
   private final XboxController xbox = new XboxController(Constants.XBOX);
+  private final JoystickButton hopperFeed = new JoystickButton(xbox, Button.kA.value);
+  private final JoystickButton visionTargetCenter = new JoystickButton(xbox, Button.kB.value);
 
   // Subsystems
   private final DriveTrain driveTrain = new DriveTrain(() -> leftStick.getY(), () -> rightStick.getY());
+  private final Hopper hopper = new Hopper();
+  private final Shooter shooter = new Shooter(() -> xbox.getTriggerAxis(Hand.kRight));
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -44,6 +55,9 @@ public class RobotContainer {
    * passing it to a {@link edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    hopperFeed.whenHeld(new Feed(hopper));
+    visionTargetCenter.whenHeld(
+        new VisionTarget(driveTrain, hopper, shooter, Constants.VISION_DIST_CENTER, Constants.VISION_RPM_CENTER));
   }
 
   /**

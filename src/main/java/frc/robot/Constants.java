@@ -18,6 +18,24 @@ package frc.robot;
  * wherever the constants are needed, to reduce verbosity.
  */
 public final class Constants {
+  // --------------------
+  // Speeds
+  // --------------------
+
+  public static final double HOPPER_SPEED = 0.5;
+  public static final double CONVEYOR_SPEED = 0.5;
+
+  // --------------------
+  // Vision
+  // --------------------
+
+  public static final double VISION_DIST_CENTER = 12 * 20;
+  public static final double VISION_RPM_CENTER = 4500;
+
+  // --------------------
+  // Ports
+  // --------------------
+
   // PWM
   public static final int DRIVE_LEFT_FRONT = 0;
   public static final int DRIVE_LEFT_BACK = 1;

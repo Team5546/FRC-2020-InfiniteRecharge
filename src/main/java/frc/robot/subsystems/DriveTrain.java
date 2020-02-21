@@ -33,6 +33,10 @@ public class DriveTrain extends SubsystemBase {
   private static final double WHEEL_CIRCUMFERENCE = 2 * Math.PI * (WHEEL_DIAMETER / 2);
   private static final double PULSES_PER_REV = 2048;
   private static final double DISTANCE_PER_PULSE = WHEEL_CIRCUMFERENCE / PULSES_PER_REV;
+  private static final double LIMELIGHT_HEIGHT = 25;
+  private static final double VISION_TARGET_HEIGHT = 89;
+  private static final double LIMELIGHT_ANGLE = 15;
+  private static final double VISION_TOLERANCE = 1;
 
   private VictorSP leftBack, leftFront, rightBack, rightFront;
   private SpeedControllerGroup left, right;
@@ -53,12 +57,13 @@ public class DriveTrain extends SubsystemBase {
   private double rotateIntegral, rotatePrevError, rotateSetpoint = 0;
   private double rotateMaxOutput = 0.5;
 
-  private double visionDistanceSetpoint = 0;
+  private double visionSetpoint = 0;
   private double visionMinAimCommand = 0.05;
 
   private NetworkTable limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
   private NetworkTableEntry limelightTx = limelightTable.getEntry("tx");
   private NetworkTableEntry limelightTy = limelightTable.getEntry("ty");
+  private NetworkTableEntry limelightLED = limelightTable.getEntry("ledMode");
 
   private DoubleSupplier leftStickSpeed, rightStickSpeed;
 
@@ -123,6 +128,36 @@ public class DriveTrain extends SubsystemBase {
     state = _state;
   }
 
+  public void setDistanceSetpoint(double setpoint) {
+    distanceSetpoint = setpoint;
+  }
+
+  public void setRotateSetpoint(double setpoint) {
+    rotateSetpoint = setpoint;
+  }
+
+  public void setVisionSetpoint(double distance) {
+    visionSetpoint = distance;
+  }
+
+  public boolean onTarget() {
+    double tx = limelightTx.getDouble(0.0);
+    double ty = limelightTy.getDouble(0.0);
+
+    double distanceError = visionSetpoint
+        - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(LIMELIGHT_ANGLE + ty));
+
+    return Math.abs(tx) < VISION_TOLERANCE && Math.abs(distanceError) < VISION_TOLERANCE;
+  }
+
+  public void enableLimelightLED() {
+    limelightLED.setNumber(3);
+  }
+
+  public void disableLimelightLED() {
+    limelightLED.setNumber(1);
+  }
+
   private double getDistanceOutput() {
     // Error = Setpoint - Avg. of two encoder distances
     double error = distanceSetpoint - ((leftEncoder.getDistance() + -rightEncoder.getDistance()) / 2);
@@ -147,7 +182,9 @@ public class DriveTrain extends SubsystemBase {
     double ty = limelightTy.getDouble(0.0);
 
     double headingError = -tx;
-    double distanceError = visionDistanceSetpoint - ty;
+    // Error = Ideal Distance - Distance to Target
+    double distanceError = visionSetpoint
+        - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(LIMELIGHT_ANGLE + ty));
     double steeringAdjust = 0.0;
     if (tx > 1.0)
       steeringAdjust = rotateKp * headingError - visionMinAimCommand;
