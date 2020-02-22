@@ -13,9 +13,11 @@ import edu.wpi.first.wpilibj.XboxController.Button;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import frc.robot.commands.climber.RaiseClimber;
 import frc.robot.commands.hopper.Feed;
 import frc.robot.commands.intake.SetIntakeSpeed;
 import frc.robot.commands.vision.VisionTarget;
+import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.Hopper;
 import frc.robot.subsystems.Intake;
@@ -30,12 +32,14 @@ public class RobotContainer {
   private final JoystickButton visionTargetCenter = new JoystickButton(xbox, Button.kB.value);
   private final JoystickButton intakeSuck = new JoystickButton(leftStick, 1);
   private final JoystickButton intakeShoot = new JoystickButton(rightStick, 1);
+  private final JoystickButton climberRaise = new JoystickButton(xbox, Button.kX.value);
 
   // Subsystems
   private final DriveTrain driveTrain = new DriveTrain(() -> leftStick.getY(), () -> rightStick.getY());
   private final Hopper hopper = new Hopper();
   private final Shooter shooter = new Shooter(() -> xbox.getTriggerAxis(Hand.kRight));
   private final Intake intake = new Intake();
+  private final Climber climber = new Climber(xbox);
 
   public RobotContainer() {
     configureButtonBindings();
@@ -47,6 +51,7 @@ public class RobotContainer {
         new VisionTarget(driveTrain, hopper, shooter, Constants.VISION_DIST_CENTER, Constants.VISION_RPM_CENTER));
     intakeSuck.whenHeld(new SetIntakeSpeed(intake, 1));
     intakeShoot.whenHeld(new SetIntakeSpeed(intake, -1));
+    climberRaise.whenHeld(new RaiseClimber(climber));
   }
 
   public Command getAutonomousCommand() {

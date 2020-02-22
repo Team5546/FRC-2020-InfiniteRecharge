@@ -24,6 +24,7 @@ public final class Constants {
 
   public static final double HOPPER_SPEED = 0.5;
   public static final double CONVEYOR_SPEED = 0.5;
+  public static final double PVC_WINCH_SPEED = 0.8;
 
   // --------------------
   // Vision
@@ -43,7 +44,7 @@ public final class Constants {
   public static final int DRIVE_RIGHT_BACK = 3;
   public static final int HOPPER_LEFT = 4;
   public static final int HOPPER_RIGHT = 5;
-  public static final int CLIMB_HOOK_WINCH = 6;
+  public static final int CLIMB_PVC_WINCH = 6;
   public static final int CLIMB_WINCH_LEFT = 7;
   public static final int CLIMB_WINCH_RIGHT = 8;
   public static final int CONVEYOR = 9;
