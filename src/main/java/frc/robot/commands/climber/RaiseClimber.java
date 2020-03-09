@@ -13,6 +13,8 @@ import frc.robot.subsystems.Climber;
 
 public class RaiseClimber extends CommandBase {
   private Climber climber;
+  private double value = 0.1;
+  private double squareAdd = Math.sqrt(value);
 
   public RaiseClimber(Climber _climber) {
     climber = _climber;
@@ -27,7 +29,10 @@ public class RaiseClimber extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    climber.setPvcWinchSpeed(Constants.PVC_WINCH_SPEED);
+    climber.setPvcWinchSpeed(value);
+    value += squareAdd;
+    squareAdd = Math.sqrt(value);
+    if (value > 1) value = 1;
   }
 
   // Called once the command ends or is interrupted.

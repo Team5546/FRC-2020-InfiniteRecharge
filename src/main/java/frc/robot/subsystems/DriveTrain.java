@@ -15,57 +15,53 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class DriveTrain extends SubsystemBase {
   public enum DriveTrainState {
-    VISION, AUTONOMOUS_DISTANCE, AUTONOMOUS_ROTATE, TELEOP, STOP
+    VISION, AUTONOMOUS, AUTONOMOUS_STRAIGHT, AUTONOMOUS_ROTATE, TELEOP, STOP, TEST
   }
 
   private DriveTrainState state;
 
-  private static final double LOOP_TIME = 0.2;
-  private static final double WHEEL_DIAMETER = 2.85;
-  private static final double WHEEL_CIRCUMFERENCE = 2 * Math.PI * (WHEEL_DIAMETER / 2);
-  private static final double PULSES_PER_REV = 2048;
-  private static final double DISTANCE_PER_PULSE = WHEEL_CIRCUMFERENCE / PULSES_PER_REV;
-  private static final double LIMELIGHT_HEIGHT = 25;
-  private static final double VISION_TARGET_HEIGHT = 89;
-  private static final double LIMELIGHT_ANGLE = 15;
+  private static final double LIMELIGHT_HEIGHT = 24;
+  private static final double VISION_TARGET_HEIGHT = 89.75;
+  private static final double LIMELIGHT_ANGLE = 16.5;
   private static final double VISION_TOLERANCE = 1;
+  private static final double VISION_SPEED = 0.3;
+  private static final double VISION_MIN_SPEED = 0.5;
+
+  private static final double PULLEY_DIAMETER = 3.5;
+  private static final double PULSE_PER_REVOLUTION = 2048;
+  private static final double STRAIGHT_TOLERANCE = .5;
 
   private VictorSP leftBack, leftFront, rightBack, rightFront;
   private SpeedControllerGroup left, right;
   private DifferentialDrive drive;
 
-  private Encoder leftEncoder, rightEncoder;
   private ADIS16448_IMU imu;
-
-  private double distanceKp = 1;
-  private double distanceKi = 0;
-  private double distanceKd = 0;
-  private double distanceIntegral, distancePrevError, distanceSetpoint = 0;
-  private double distanceMaxOutput = 0.8;
-
-  private double rotateKp = 1;
-  private double rotateKi = 0;
-  private double rotateKd = 0;
-  private double rotateIntegral, rotatePrevError, rotateSetpoint = 0;
-  private double rotateMaxOutput = 0.5;
+  private Encoder leftEncoder, rightEncoder;
 
   private double visionSetpoint = 0;
-  private double visionMinAimCommand = 0.05;
+  private double straightSetpoint = 0;
 
   private NetworkTable limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
   private NetworkTableEntry limelightTx = limelightTable.getEntry("tx");
   private NetworkTableEntry limelightTy = limelightTable.getEntry("ty");
   private NetworkTableEntry limelightLED = limelightTable.getEntry("ledMode");
+  private NetworkTableEntry limelightCamMode = limelightTable.getEntry("camMode");
 
   private DoubleSupplier leftStickSpeed, rightStickSpeed;
+  private double autoLeftSpeed, autoRightSpeed;
+
+  private double initialBatteryVoltage = 0.0;
+  private double teleSpeed = 0.8;
 
   public DriveTrain(DoubleSupplier _leftStickSpeed, DoubleSupplier _rightStickSpeed) {
     leftBack = new VictorSP(Constants.DRIVE_LEFT_BACK);
@@ -78,11 +74,11 @@ public class DriveTrain extends SubsystemBase {
 
     drive = new DifferentialDrive(left, right);
 
-    leftEncoder = new Encoder(Constants.ENCODER_LEFT_1, Constants.ENCODER_LEFT_2);
-    leftEncoder.setDistancePerPulse(DISTANCE_PER_PULSE);
-    rightEncoder = new Encoder(Constants.ENCODER_RIGHT_1, Constants.ENCODER_RIGHT_2);
-    leftEncoder.setDistancePerPulse(DISTANCE_PER_PULSE);
     imu = new ADIS16448_IMU();
+    leftEncoder = new Encoder(Constants.ENCODER_LEFT_A,Constants.ENCODER_LEFT_B);
+    rightEncoder = new Encoder(Constants.ENCODER_RIGHT_A, Constants.ENCODER_RIGHT_B);
+    leftEncoder.setDistancePerPulse(PULLEY_DIAMETER / PULSE_PER_REVOLUTION);
+    rightEncoder.setDistancePerPulse(PULLEY_DIAMETER / PULSE_PER_REVOLUTION);
 
     leftStickSpeed = _leftStickSpeed;
     rightStickSpeed = _rightStickSpeed;
@@ -92,25 +88,49 @@ public class DriveTrain extends SubsystemBase {
 
   @Override
   public void periodic() {
+    double tx = limelightTx.getDouble(0.0);
+    double ty = limelightTy.getDouble(0.0);
+
     switch (state) {
     case STOP:
+      SmartDashboard.putString("DriveTrain State", "STOP");
+      disableLimelightLED();
       left.set(0);
       right.set(0);
       break;
     case VISION:
+      enableLimelightLED();
+      SmartDashboard.putString("DriveTrain State", "VISION");
+      // SmartDashboard.putNumber("Limelight TX", tx);
+      // SmartDashboard.putNumber("Limelight TY", ty);
+      // SmartDashboard.putNumber("Limelight Distance",
+      //     ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))));
       double[] visionOutputs = getVisionOutput();
-      drive.tankDrive(visionOutputs[0] - visionOutputs[1], visionOutputs[0] + visionOutputs[1]);
+      // SmartDashboard.putNumber("Rotation", visionOutputs[0]);
+      double leftSpeed = Math.abs(tx) > VISION_TOLERANCE ? Math.copySign(VISION_MIN_SPEED, visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED) : 0;
+      double rightSpeed = Math.abs(tx) > VISION_TOLERANCE ? Math.copySign(VISION_MIN_SPEED, -visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED) : 0;
+      // SmartDashboard.putNumber("Left", leftSpeed);
+      // SmartDashboard.putNumber("Right", rightSpeed);
+      double voltageAdjust = initialBatteryVoltage < 12.1 ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5) : 1.0;
+      drive.tankDrive(Math.max(-1, Math.min(1, leftSpeed*voltageAdjust)), Math.max(-1, Math.min(1, rightSpeed*voltageAdjust)));
       break;
-    case AUTONOMOUS_DISTANCE:
-      double distanceOutput = getDistanceOutput();
-      drive.tankDrive(distanceOutput, distanceOutput);
+    case TEST:
+      enableLimelightLED();
+      SmartDashboard.putString("DriveTrain State", "TEST");
+      // SmartDashboard.putNumber("Limelight TX", tx);
+      // SmartDashboard.putNumber("Limelight TY", ty);
+      // SmartDashboard.putNumber("Limelight Distance", ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))));
+    case AUTONOMOUS:
+      drive.tankDrive(autoLeftSpeed, autoRightSpeed);
       break;
-    case AUTONOMOUS_ROTATE:
-      double rotateOutput = getRotateOutput();
-      drive.tankDrive(-rotateOutput, rotateOutput);
+    case AUTONOMOUS_STRAIGHT:
+      double straightOutput = getStraightOutput();
+      drive.tankDrive(straightOutput, straightOutput);
       break;
     default:
-      drive.tankDrive(leftStickSpeed.getAsDouble(), rightStickSpeed.getAsDouble());
+      disableLimelightLED();
+      SmartDashboard.putString("DriveTrain State", "TELEOP");
+      drive.tankDrive(leftStickSpeed.getAsDouble() * teleSpeed, rightStickSpeed.getAsDouble() * teleSpeed);
       break;
     }
   }
@@ -120,20 +140,33 @@ public class DriveTrain extends SubsystemBase {
     rightEncoder.reset();
   }
 
-  public void resetRotation() {
-    imu.reset();
-  }
+  // public void resetRotation() {
+  //   imu.reset();
+  // }
 
   public void setState(DriveTrainState _state) {
     state = _state;
   }
 
-  public void setDistanceSetpoint(double setpoint) {
-    distanceSetpoint = setpoint;
+  public void setTeleSpeed(double speed) {
+    teleSpeed = speed;
   }
 
-  public void setRotateSetpoint(double setpoint) {
-    rotateSetpoint = setpoint;
+  public void setStraightSetpoint(double setpoint) {
+    straightSetpoint = setpoint;
+  }
+
+  // public void setRotateSetpoint(double setpoint) {
+  //   rotateSetpoint = setpoint;
+  // }
+
+  public void setAutoSpeed(double leftSpeed, double rightSpeed) {
+    autoLeftSpeed = leftSpeed;
+    autoRightSpeed = rightSpeed;
+  }
+
+  public void setBatteryVoltage(double voltage) {
+    initialBatteryVoltage = voltage;
   }
 
   public void setVisionSetpoint(double distance) {
@@ -142,57 +175,72 @@ public class DriveTrain extends SubsystemBase {
 
   public boolean onTarget() {
     double tx = limelightTx.getDouble(0.0);
-    double ty = limelightTy.getDouble(0.0);
 
-    double distanceError = visionSetpoint
-        - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(LIMELIGHT_ANGLE + ty));
+    return Math.abs(tx) < VISION_TOLERANCE;
+  }
 
-    return Math.abs(tx) < VISION_TOLERANCE && Math.abs(distanceError) < VISION_TOLERANCE;
+  public boolean isOnStraightTarget() {
+    double error = straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
+    return error < STRAIGHT_TOLERANCE;
   }
 
   public void enableLimelightLED() {
     limelightLED.setNumber(3);
+    limelightCamMode.setNumber(0);
   }
 
   public void disableLimelightLED() {
     limelightLED.setNumber(1);
+    limelightCamMode.setNumber(1);
   }
 
-  private double getDistanceOutput() {
+  private double getStraightOutput() {
     // Error = Setpoint - Avg. of two encoder distances
-    double error = distanceSetpoint - ((leftEncoder.getDistance() + -rightEncoder.getDistance()) / 2);
-    distanceIntegral += (error * LOOP_TIME);
-    double derivative = (error - distancePrevError) / LOOP_TIME;
-    return Math.max(-distanceMaxOutput,
-        Math.min(distanceMaxOutput, distanceKp * error + distanceKi * distanceIntegral + distanceKd * derivative));
+    double error = straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
+    double theoreticalPower = 0;
+    if (Math.abs(error) < 100) theoreticalPower = Math.sqrt(Math.abs(error)) / 10;
+    else theoreticalPower = 1;
+    theoreticalPower = Math.copySign(theoreticalPower, error);
+    return theoreticalPower * Constants.AUTONOMOUS_STRAIGHT_SPEED;
   }
 
-  private double getRotateOutput() {
-    // Error = Setpoint - IMU Angle
-    double error = rotateSetpoint - imu.getGyroAngleZ();
-    rotateIntegral += (error * LOOP_TIME);
-    double derivative = (error - rotatePrevError) / LOOP_TIME;
-    return Math.max(-rotateMaxOutput,
-        Math.min(rotateMaxOutput, rotateKp * error + rotateKi * rotateIntegral + rotateKd * derivative));
-  }
+  // private double getRotateOutput() {
+  //   // Error = Setpoint - IMU Angle
+  //   double error = rotateSetpoint - imu.getGyroAngleZ();
+  //   rotateIntegral += (error * LOOP_TIME);
+  //   double derivative = (error - rotatePrevError) / LOOP_TIME;
+  //   return Math.max(-rotateMaxOutput,
+  //       Math.min(rotateMaxOutput, rotateKp * error + rotateKi * rotateIntegral + rotateKd * derivative));
+  // }
 
   // Returns [distanceOutput, rotateOutput]
   private double[] getVisionOutput() {
     double tx = limelightTx.getDouble(0.0);
     double ty = limelightTy.getDouble(0.0);
 
-    double headingError = -tx;
+    double headingError = tx;
     // Error = Ideal Distance - Distance to Target
     double distanceError = visionSetpoint
-        - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(LIMELIGHT_ANGLE + ty));
-    double steeringAdjust = 0.0;
-    if (tx > 1.0)
-      steeringAdjust = rotateKp * headingError - visionMinAimCommand;
-    else if (tx < 1.0)
-      steeringAdjust = rotateKp * headingError + visionMinAimCommand;
-    double distanceAdjust = distanceKp * distanceError;
+         - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty)));
+    // double steeringAdjust = 0.0;
+    // if (tx > 1.0)
+    //   steeringAdjust = rotateKp * headingError - visionMinAimCommand;
+    // else if (tx < 1.0)
+    //   steeringAdjust = rotateKp * headingError + visionMinAimCommand;
+    // double distanceAdjust = distanceKp * distanceError;
+
+    // FOV = 60, so tx can be (-30,30), maps between (-1,1)
+    double steeringAdjust = headingError/30;
+    double distanceAdjust = Math.max(-1, Math.min(1, distanceError));
+
 
     double[] outputs = { steeringAdjust, distanceAdjust };
+    SmartDashboard.putNumberArray("Vision Outputs", outputs);
     return outputs;
+  }
+
+  public double getDistance() {
+    double ty = limelightTy.getDouble(0.0);
+    return ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty)));
   }
 }

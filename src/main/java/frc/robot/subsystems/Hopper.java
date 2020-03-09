@@ -35,7 +35,7 @@ public class Hopper extends SubsystemBase {
 
   public void unjam(double speed) {
     left.set(-speed);
-    right.set(speed);
+    right.set(-speed);
   }
 
   public void stop() {

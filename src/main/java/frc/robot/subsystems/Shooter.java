@@ -32,6 +32,7 @@ public class Shooter extends SubsystemBase {
 
     left = new CANSparkMax(Constants.SHOOTER_LEFT, MotorType.kBrushless);
     right = new CANSparkMax(Constants.SHOOTER_RIGHT, MotorType.kBrushless);
+    right.setInverted(true);
     left.setClosedLoopRampRate(2);
     right.setClosedLoopRampRate(2);
 
@@ -45,10 +46,10 @@ public class Shooter extends SubsystemBase {
     kI = 0;
     kD = 0;
     kIz = 0;
-    kFF = 0.000015;
+    kFF = 0.0002;
     kMaxOutput = 1;
     kMinOutput = -1;
-    maxRPM = 5700;
+    maxRPM = 6400;
 
     leftPID.setP(kP);
     rightPID.setP(kP);
@@ -73,7 +74,8 @@ public class Shooter extends SubsystemBase {
   @Override
   public void periodic() {
     if (!pidEnabled) {
-      rpmSetpoint = backupSpeed.getAsDouble() * maxRPM;
+      if (backupSpeed.getAsDouble() > 0.1 || backupSpeed.getAsDouble() < -0.1) rpmSetpoint = backupSpeed.getAsDouble() * maxRPM;
+      else rpmSetpoint = 0;
     }
 
     updatePID();
@@ -81,6 +83,10 @@ public class Shooter extends SubsystemBase {
 
   public void setRPM(double rpm) {
     rpmSetpoint = rpm;
+  }
+
+  public double getRPM() {
+    return (leftEncoder.getVelocity() + rightEncoder.getVelocity()) / 2;
   }
 
   public void enablePID() {

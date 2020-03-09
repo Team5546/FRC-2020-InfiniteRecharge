@@ -5,36 +5,37 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package frc.robot.commands.hopper;
+package frc.robot.commands.drivetrain;
 
 import edu.wpi.first.wpilibj2.command.CommandBase;
-import frc.robot.Constants;
-import frc.robot.subsystems.Hopper;
+import frc.robot.subsystems.DriveTrain;
 
-public class Unjam extends CommandBase {
-  private Hopper hopper;
-
-  public Unjam(Hopper _hopper) {
-    hopper = _hopper;
-    addRequirements(hopper);
+public class Turbo extends CommandBase {
+  private DriveTrain driveTrain;
+  /**
+   * Creates a new Turbo.
+   */
+  public Turbo(DriveTrain _driveTrain) {
+    driveTrain = _driveTrain;
+    addRequirements(driveTrain);
+    // Use addRequirements() here to declare subsystem dependencies.
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    driveTrain.setTeleSpeed(1.0);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    hopper.unjam(Constants.HOPPER_SPEED);
-    hopper.driveConveyor(-Constants.CONVEYOR_SPEED);
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    hopper.stop();
+    driveTrain.setTeleSpeed(0.8);
   }
 
   // Returns true when the command should end.

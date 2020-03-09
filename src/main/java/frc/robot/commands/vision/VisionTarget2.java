@@ -15,7 +15,7 @@ import frc.robot.subsystems.DriveTrain;
 import frc.robot.subsystems.Hopper;
 import frc.robot.subsystems.Shooter;
 
-public class VisionTarget extends CommandBase {
+public class VisionTarget2 extends CommandBase {
   private DriveTrain driveTrain;
   private Hopper hopper;
   private Shooter shooter;
@@ -24,16 +24,18 @@ public class VisionTarget extends CommandBase {
   // private int rpmOffset = 133;
   private double m = 3.2508;
   private double b = 3550.7;
+  private double terriblePCOffset = -100;
 
   private double initialBatteryVoltage = 0.0;
 
   private static final double RPM_TOLERANCE = 100;
 
-  public VisionTarget(DriveTrain _driveTrain, Hopper _hopper, Shooter _shooter) {
+  public VisionTarget2(DriveTrain _driveTrain, Hopper _hopper, Shooter _shooter, double _terriblePCOffset) {
     // Use addRequirements() here to declare subsystem dependencies.
     driveTrain = _driveTrain;
     hopper = _hopper;
     shooter = _shooter;
+    terriblePCOffset = _terriblePCOffset;
     addRequirements(driveTrain, hopper);
 
     initialBatteryVoltage = RobotController.getBatteryVoltage();
@@ -62,7 +64,7 @@ public class VisionTarget extends CommandBase {
       double rpm = m * driveTrain.getDistance() + b;
       double rpmOffset = rpm*.05;
       double voltageAdjust = initialBatteryVoltage < 12.1 ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5) : 1.0;
-      double finalRpm = (-rpm-rpmOffset) * voltageAdjust;
+      double finalRpm = (-rpm-rpmOffset-terriblePCOffset) * voltageAdjust;
       shooter.setRPM(finalRpm);
       SmartDashboard.putNumber("RPM ERROR", shooter.getRPM() + rpm);
       if (Math.abs(shooter.getRPM() + rpm) < RPM_TOLERANCE) {

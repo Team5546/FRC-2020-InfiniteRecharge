@@ -29,8 +29,10 @@ public class Climber extends SubsystemBase {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    setPvcWinchSpeed(xbox.getTriggerAxis(Hand.kLeft));
-    setWinchSpeed(xbox.getTriggerAxis(Hand.kRight));
+    if (xbox.getBumper(Hand.kLeft)) setPvcWinchSpeed(xbox.getTriggerAxis(Hand.kLeft));
+    else setPvcWinchSpeed(-xbox.getTriggerAxis(Hand.kLeft));
+    if (xbox.getBumper(Hand.kRight)) setWinchSpeed(xbox.getTriggerAxis(Hand.kRight));
+    else setWinchSpeed(-xbox.getTriggerAxis(Hand.kRight));
   }
 
   public void setPvcWinchSpeed(double speed) {
