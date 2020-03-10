@@ -25,14 +25,14 @@ public class DriveStraight extends CommandBase {
   @Override
   public void initialize() {
     driveTrain.resetDistance();
+    driveTrain.resetRotation();
     driveTrain.setStraightSetpoint(distance);
     driveTrain.setState(DriveTrain.DriveTrainState.AUTONOMOUS_STRAIGHT);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
-  public void execute() {
-  }
+  public void execute() {}
 
   // Called once the command ends or is interrupted.
   @Override

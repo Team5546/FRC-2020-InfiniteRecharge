@@ -7,10 +7,7 @@
 
 package frc.robot.subsystems;
 
-import java.util.function.DoubleSupplier;
-
 import com.analog.adis16448.frc.ADIS16448_IMU;
-
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -22,10 +19,18 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import java.util.function.DoubleSupplier;
 
 public class DriveTrain extends SubsystemBase {
+
   public enum DriveTrainState {
-    VISION, AUTONOMOUS, AUTONOMOUS_STRAIGHT, AUTONOMOUS_ROTATE, TELEOP, STOP, TEST
+    VISION,
+    AUTONOMOUS,
+    AUTONOMOUS_STRAIGHT,
+    AUTONOMOUS_ROTATE,
+    TELEOP,
+    STOP,
+    TEST
   }
 
   private DriveTrainState state;
@@ -38,6 +43,7 @@ public class DriveTrain extends SubsystemBase {
   private static final double VISION_MIN_SPEED = 0.5;
 
   private static final double PULLEY_DIAMETER = 3.5;
+  private static final double PULLEY_CIRCUMFERENCE = Math.PI * PULLEY_DIAMETER;
   private static final double PULSE_PER_REVOLUTION = 2048;
   private static final double STRAIGHT_TOLERANCE = .5;
 
@@ -75,10 +81,11 @@ public class DriveTrain extends SubsystemBase {
     drive = new DifferentialDrive(left, right);
 
     imu = new ADIS16448_IMU();
-    leftEncoder = new Encoder(Constants.ENCODER_LEFT_A,Constants.ENCODER_LEFT_B);
-    rightEncoder = new Encoder(Constants.ENCODER_RIGHT_A, Constants.ENCODER_RIGHT_B);
-    leftEncoder.setDistancePerPulse(PULLEY_DIAMETER / PULSE_PER_REVOLUTION);
-    rightEncoder.setDistancePerPulse(PULLEY_DIAMETER / PULSE_PER_REVOLUTION);
+    leftEncoder = new Encoder(Constants.ENCODER_LEFT_B, Constants.ENCODER_LEFT_A);
+    rightEncoder = new Encoder(Constants.ENCODER_RIGHT_B, Constants.ENCODER_RIGHT_A);
+    leftEncoder.setDistancePerPulse(PULLEY_CIRCUMFERENCE / PULSE_PER_REVOLUTION);
+    rightEncoder.setDistancePerPulse(PULLEY_CIRCUMFERENCE / PULSE_PER_REVOLUTION);
+    leftEncoder.setReverseDirection(true);
 
     leftStickSpeed = _leftStickSpeed;
     rightStickSpeed = _rightStickSpeed;
@@ -92,46 +99,71 @@ public class DriveTrain extends SubsystemBase {
     double ty = limelightTy.getDouble(0.0);
 
     switch (state) {
-    case STOP:
-      SmartDashboard.putString("DriveTrain State", "STOP");
-      disableLimelightLED();
-      left.set(0);
-      right.set(0);
-      break;
-    case VISION:
-      enableLimelightLED();
-      SmartDashboard.putString("DriveTrain State", "VISION");
-      // SmartDashboard.putNumber("Limelight TX", tx);
-      // SmartDashboard.putNumber("Limelight TY", ty);
-      // SmartDashboard.putNumber("Limelight Distance",
-      //     ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))));
-      double[] visionOutputs = getVisionOutput();
-      // SmartDashboard.putNumber("Rotation", visionOutputs[0]);
-      double leftSpeed = Math.abs(tx) > VISION_TOLERANCE ? Math.copySign(VISION_MIN_SPEED, visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED) : 0;
-      double rightSpeed = Math.abs(tx) > VISION_TOLERANCE ? Math.copySign(VISION_MIN_SPEED, -visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED) : 0;
-      // SmartDashboard.putNumber("Left", leftSpeed);
-      // SmartDashboard.putNumber("Right", rightSpeed);
-      double voltageAdjust = initialBatteryVoltage < 12.1 ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5) : 1.0;
-      drive.tankDrive(Math.max(-1, Math.min(1, leftSpeed*voltageAdjust)), Math.max(-1, Math.min(1, rightSpeed*voltageAdjust)));
-      break;
-    case TEST:
-      enableLimelightLED();
-      SmartDashboard.putString("DriveTrain State", "TEST");
-      // SmartDashboard.putNumber("Limelight TX", tx);
-      // SmartDashboard.putNumber("Limelight TY", ty);
-      // SmartDashboard.putNumber("Limelight Distance", ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))));
-    case AUTONOMOUS:
-      drive.tankDrive(autoLeftSpeed, autoRightSpeed);
-      break;
-    case AUTONOMOUS_STRAIGHT:
-      double straightOutput = getStraightOutput();
-      drive.tankDrive(straightOutput, straightOutput);
-      break;
-    default:
-      disableLimelightLED();
-      SmartDashboard.putString("DriveTrain State", "TELEOP");
-      drive.tankDrive(leftStickSpeed.getAsDouble() * teleSpeed, rightStickSpeed.getAsDouble() * teleSpeed);
-      break;
+      case STOP:
+        SmartDashboard.putString("DriveTrain State", "STOP");
+        disableLimelightLED();
+        left.set(0);
+        right.set(0);
+        break;
+      case VISION:
+        enableLimelightLED();
+        SmartDashboard.putString("DriveTrain State", "VISION");
+        double[] visionOutputs = getVisionOutput();
+        double leftSpeed = Math.abs(tx) > VISION_TOLERANCE
+          ? Math.copySign(VISION_MIN_SPEED, visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED)
+          : 0;
+        double rightSpeed = Math.abs(tx) > VISION_TOLERANCE
+          ? Math.copySign(VISION_MIN_SPEED, -visionOutputs[0]) + (visionOutputs[0] * VISION_SPEED)
+          : 0;
+        double voltageAdjust = 1.0;
+        // double voltageAdjust = initialBatteryVoltage < 12.1
+        //   ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5)
+        //   : 1.0;
+        drive.tankDrive(
+          Math.max(-1, Math.min(1, leftSpeed * voltageAdjust)),
+          Math.max(-1, Math.min(1, rightSpeed * voltageAdjust))
+        );
+        break;
+      case TEST:
+        enableLimelightLED();
+        SmartDashboard.putString("DriveTrain State", "TEST");
+        SmartDashboard.putNumber(
+          "Limelight Distance",
+          (
+            (VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) /
+            Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))
+          )
+        );
+      case AUTONOMOUS:
+        drive.tankDrive(autoLeftSpeed, autoRightSpeed);
+        break;
+      case AUTONOMOUS_STRAIGHT:
+        SmartDashboard.putString("DriveTrain State", "AUTONOMOUS_STRAIGHT");
+        double[] straightOutput = getStraightOutput();
+        // double rotationAngle = imu.getGyroAngleZ();
+        // double rotationAdjust = Math.max(-.1, Math.min(.1, rotationAngle / 10));
+        // double driveInput = Math.copySign(.5 + Math.abs(straightOutput), straightOutput);
+        // double driveInput = straightOutput;
+        SmartDashboard.putNumberArray("Straight Output", straightOutput);
+        SmartDashboard.putNumber(
+          "Straight Error",
+          straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2)
+        );
+        // SmartDashboard.putNumber("Left Dist", leftEncoder.getDistance());
+        // SmartDashboard.putNumber("Right Dist", rightEncoder.getDistance());
+        drive.tankDrive(straightOutput[0], straightOutput[1]);
+        break;
+      default:
+        disableLimelightLED();
+        SmartDashboard.putString("DriveTrain State", "TELEOP");
+        SmartDashboard.putNumber("IMU Z", imu.getGyroAngleZ());
+        // SmartDashboard.putNumber("Left Dist", leftEncoder.getDistance());
+        // SmartDashboard.putNumber("Right Dist", rightEncoder.getDistance());
+        drive.tankDrive(
+          leftStickSpeed.getAsDouble() * teleSpeed,
+          rightStickSpeed.getAsDouble() * teleSpeed
+        );
+        break;
     }
   }
 
@@ -140,9 +172,9 @@ public class DriveTrain extends SubsystemBase {
     rightEncoder.reset();
   }
 
-  // public void resetRotation() {
-  //   imu.reset();
-  // }
+  public void resetRotation() {
+    imu.reset();
+  }
 
   public void setState(DriveTrainState _state) {
     state = _state;
@@ -180,8 +212,9 @@ public class DriveTrain extends SubsystemBase {
   }
 
   public boolean isOnStraightTarget() {
-    double error = straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
-    return error < STRAIGHT_TOLERANCE;
+    double error =
+      straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
+    return Math.abs(error) < STRAIGHT_TOLERANCE;
   }
 
   public void enableLimelightLED() {
@@ -194,14 +227,29 @@ public class DriveTrain extends SubsystemBase {
     limelightCamMode.setNumber(1);
   }
 
-  private double getStraightOutput() {
+  public double getEncoderOutput(int side) {
+    if (side == 0) return leftEncoder.get(); else return rightEncoder.get();
+  }
+
+  private double[] getStraightOutput() {
     // Error = Setpoint - Avg. of two encoder distances
-    double error = straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
-    double theoreticalPower = 0;
-    if (Math.abs(error) < 100) theoreticalPower = Math.sqrt(Math.abs(error)) / 10;
-    else theoreticalPower = 1;
-    theoreticalPower = Math.copySign(theoreticalPower, error);
-    return theoreticalPower * Constants.AUTONOMOUS_STRAIGHT_SPEED;
+    double leftError = straightSetpoint - leftEncoder.getDistance();
+    double leftTheoreticalPower = Math.min(
+      Constants.AUTONOMOUS_STRAIGHT_MAX_SPEED,
+      Math.sqrt(Math.abs(leftError)) / 10 + 0.35
+    );
+    leftTheoreticalPower = Math.copySign(leftTheoreticalPower, leftError);
+    double rightError = straightSetpoint - rightEncoder.getDistance();
+    double rightTheoreticalPower = Math.min(
+      Constants.AUTONOMOUS_STRAIGHT_MAX_SPEED,
+      Math.sqrt(Math.abs(rightError)) / 10 + 0.35
+    );
+    rightTheoreticalPower = Math.copySign(rightTheoreticalPower, rightError);
+    double[] powers = new double[2];
+    powers[0] = leftTheoreticalPower;
+    // Tweak bc right side a tad slower
+    powers[1] = rightTheoreticalPower * 1.12;
+    return powers;
   }
 
   // private double getRotateOutput() {
@@ -220,8 +268,9 @@ public class DriveTrain extends SubsystemBase {
 
     double headingError = tx;
     // Error = Ideal Distance - Distance to Target
-    double distanceError = visionSetpoint
-         - ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty)));
+    double distanceError =
+      visionSetpoint -
+      ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty)));
     // double steeringAdjust = 0.0;
     // if (tx > 1.0)
     //   steeringAdjust = rotateKp * headingError - visionMinAimCommand;
@@ -230,9 +279,8 @@ public class DriveTrain extends SubsystemBase {
     // double distanceAdjust = distanceKp * distanceError;
 
     // FOV = 60, so tx can be (-30,30), maps between (-1,1)
-    double steeringAdjust = headingError/30;
+    double steeringAdjust = headingError / 30;
     double distanceAdjust = Math.max(-1, Math.min(1, distanceError));
-
 
     double[] outputs = { steeringAdjust, distanceAdjust };
     SmartDashboard.putNumberArray("Vision Outputs", outputs);
@@ -241,6 +289,8 @@ public class DriveTrain extends SubsystemBase {
 
   public double getDistance() {
     double ty = limelightTy.getDouble(0.0);
-    return ((VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty)));
+    return (
+      (VISION_TARGET_HEIGHT - LIMELIGHT_HEIGHT) / Math.tan(Math.toRadians(LIMELIGHT_ANGLE + ty))
+    );
   }
 }

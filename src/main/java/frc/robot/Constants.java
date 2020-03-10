@@ -28,7 +28,7 @@ public final class Constants {
   public static final double CONVEYOR_SPEED = 0.5;
   public static final double PVC_WINCH_SPEED = 1.0;
   public static final double DRIVE_SPEED = 0.8;
-  public static final double AUTONOMOUS_STRAIGHT_SPEED = 0.5;
+  public static final double AUTONOMOUS_STRAIGHT_MAX_SPEED = 0.8;
 
   // --------------------
   // Vision
@@ -50,7 +50,7 @@ public final class Constants {
   public static final int HOPPER_RIGHT = 4;
   public static final int CLIMB_PVC_WINCH = 3;
   public static final int CLIMB_WINCH_LEFT = 0;
-  public static final int CLIMB_WINCH_RIGHT = 9 ;
+  public static final int CLIMB_WINCH_RIGHT = 9;
   public static final int CONVEYOR = 6;
 
   // CAN
@@ -66,6 +66,6 @@ public final class Constants {
   // DIO
   public static final int ENCODER_LEFT_A = 8;
   public static final int ENCODER_LEFT_B = 9;
-  public static final int ENCODER_RIGHT_A = 0;
-  public static final int ENCODER_RIGHT_B = 1;
+  public static final int ENCODER_RIGHT_A = 1;
+  public static final int ENCODER_RIGHT_B = 0;
 }
