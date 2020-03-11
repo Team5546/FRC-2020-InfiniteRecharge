@@ -15,8 +15,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.auto.AutoCenter;
+import frc.robot.commands.auto.AutoRightTrench;
 import frc.robot.commands.auto.DriveStraight;
 import frc.robot.commands.climber.RaiseClimber;
+import frc.robot.commands.drivetrain.Rotate;
 import frc.robot.commands.drivetrain.Turbo;
 import frc.robot.commands.hopper.Feed;
 import frc.robot.commands.hopper.Unjam;
@@ -72,7 +74,13 @@ public class RobotContainer {
 
   public Command getAutonomousCommand() {
     // return new AutoCenter(driveTrain, hopper, shooter);
-    return new DriveStraight(driveTrain, 48);
+    // return new Rotate(driveTrain, 90);
+    // return new DriveStraight(driveTrain, 121);
+    return new AutoRightTrench(driveTrain, hopper, shooter, intake);
+  }
+
+  public void resetDriveTrain() {
+    driveTrain.setState(DriveTrain.DriveTrainState.TELEOP);
   }
 
   public void runDebug() {

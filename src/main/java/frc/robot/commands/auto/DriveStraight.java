@@ -24,8 +24,9 @@ public class DriveStraight extends CommandBase {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    System.out.println("DRIVE STRAIGHT IS INITIALIZED");
     driveTrain.resetDistance();
-    driveTrain.resetRotation();
+    // driveTrain.resetRotation();
     driveTrain.setStraightSetpoint(distance);
     driveTrain.setState(DriveTrain.DriveTrainState.AUTONOMOUS_STRAIGHT);
   }

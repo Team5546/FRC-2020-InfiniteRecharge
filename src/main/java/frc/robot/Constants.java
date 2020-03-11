@@ -23,12 +23,13 @@ public final class Constants {
   // --------------------
 
   // public static final double INTAKE_SPEED = 0.45;
-  public static final double INTAKE_SPEED = 1.0;
+  public static final double INTAKE_SPEED = 0.6;
   public static final double HOPPER_SPEED = 0.5;
   public static final double CONVEYOR_SPEED = 0.5;
   public static final double PVC_WINCH_SPEED = 1.0;
   public static final double DRIVE_SPEED = 0.8;
-  public static final double AUTONOMOUS_STRAIGHT_MAX_SPEED = 0.8;
+  public static final double AUTONOMOUS_STRAIGHT_MAX_SPEED = 0.65;
+  public static final double AUTONOMOUS_ROTATE_MAX_SPEED = 0.8;
 
   // --------------------
   // Vision

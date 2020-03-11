@@ -10,13 +10,14 @@ package frc.robot.commands.intake;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.subsystems.Intake;
 
-public class SetIntakeSpeed extends CommandBase {
+public class AutoIntakeSpeed extends CommandBase {
   private Intake intake;
   private double speed;
 
-  public SetIntakeSpeed(Intake _intake, double _speed) {
+  public AutoIntakeSpeed(Intake _intake, double _speed) {
     intake = _intake;
     speed = _speed;
+
     addRequirements(intake);
   }
 
@@ -32,13 +33,11 @@ public class SetIntakeSpeed extends CommandBase {
 
   // Called once the command ends or is interrupted.
   @Override
-  public void end(boolean interrupted) {
-    intake.setSpeed(0);
-  }
+  public void end(boolean interrupted) {}
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    return false;
+    return true;
   }
 }

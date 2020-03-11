@@ -96,6 +96,7 @@ public class Robot extends TimedRobot {
       m_autonomousCommand.cancel();
     }
     // SmartDashboard.putNumber("RPM Setpoint", -1500);
+    m_robotContainer.resetDriveTrain();
   }
 
   /**

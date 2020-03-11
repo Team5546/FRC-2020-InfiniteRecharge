@@ -46,6 +46,7 @@ public class DriveTrain extends SubsystemBase {
   private static final double PULLEY_CIRCUMFERENCE = Math.PI * PULLEY_DIAMETER;
   private static final double PULSE_PER_REVOLUTION = 2048;
   private static final double STRAIGHT_TOLERANCE = .5;
+  private static final double ROTATE_TOLERANCE = 3;
 
   private VictorSP leftBack, leftFront, rightBack, rightFront;
   private SpeedControllerGroup left, right;
@@ -56,6 +57,7 @@ public class DriveTrain extends SubsystemBase {
 
   private double visionSetpoint = 0;
   private double straightSetpoint = 0;
+  private double rotateSetpoint = 0;
 
   private NetworkTable limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
   private NetworkTableEntry limelightTx = limelightTable.getEntry("tx");
@@ -149,9 +151,14 @@ public class DriveTrain extends SubsystemBase {
           "Straight Error",
           straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2)
         );
-        // SmartDashboard.putNumber("Left Dist", leftEncoder.getDistance());
-        // SmartDashboard.putNumber("Right Dist", rightEncoder.getDistance());
+        SmartDashboard.putNumber("Left Dist", leftEncoder.getDistance());
+        SmartDashboard.putNumber("Right Dist", rightEncoder.getDistance());
         drive.tankDrive(straightOutput[0], straightOutput[1]);
+        break;
+      case AUTONOMOUS_ROTATE:
+        SmartDashboard.putNumber("Rotate Error", rotateSetpoint - imu.getGyroAngleZ());
+        double[] rotateOutput = getRotateOutput();
+        drive.tankDrive(rotateOutput[0], rotateOutput[1]);
         break;
       default:
         disableLimelightLED();
@@ -188,9 +195,9 @@ public class DriveTrain extends SubsystemBase {
     straightSetpoint = setpoint;
   }
 
-  // public void setRotateSetpoint(double setpoint) {
-  //   rotateSetpoint = setpoint;
-  // }
+  public void setRotateSetpoint(double setpoint) {
+    rotateSetpoint = setpoint;
+  }
 
   public void setAutoSpeed(double leftSpeed, double rightSpeed) {
     autoLeftSpeed = leftSpeed;
@@ -212,9 +219,14 @@ public class DriveTrain extends SubsystemBase {
   }
 
   public boolean isOnStraightTarget() {
-    double error =
-      straightSetpoint - ((leftEncoder.getDistance() + rightEncoder.getDistance()) / 2);
-    return Math.abs(error) < STRAIGHT_TOLERANCE;
+    double leftError = straightSetpoint - leftEncoder.getDistance();
+    double rightError = straightSetpoint - rightEncoder.getDistance();
+    return Math.abs(leftError) < STRAIGHT_TOLERANCE && Math.abs(rightError) < STRAIGHT_TOLERANCE;
+  }
+
+  public boolean isOnRotateTarget() {
+    double error = rotateSetpoint - imu.getGyroAngleZ();
+    return Math.abs(error) < ROTATE_TOLERANCE;
   }
 
   public void enableLimelightLED() {
@@ -242,7 +254,7 @@ public class DriveTrain extends SubsystemBase {
     double rightError = straightSetpoint - rightEncoder.getDistance();
     double rightTheoreticalPower = Math.min(
       Constants.AUTONOMOUS_STRAIGHT_MAX_SPEED,
-      Math.sqrt(Math.abs(rightError)) / 10 + 0.35
+      Math.sqrt(Math.abs(rightError)) / 5 + 0.35
     );
     rightTheoreticalPower = Math.copySign(rightTheoreticalPower, rightError);
     double[] powers = new double[2];
@@ -252,14 +264,19 @@ public class DriveTrain extends SubsystemBase {
     return powers;
   }
 
-  // private double getRotateOutput() {
-  //   // Error = Setpoint - IMU Angle
-  //   double error = rotateSetpoint - imu.getGyroAngleZ();
-  //   rotateIntegral += (error * LOOP_TIME);
-  //   double derivative = (error - rotatePrevError) / LOOP_TIME;
-  //   return Math.max(-rotateMaxOutput,
-  //       Math.min(rotateMaxOutput, rotateKp * error + rotateKi * rotateIntegral + rotateKd * derivative));
-  // }
+  private double[] getRotateOutput() {
+    // Error = Setpoint - IMU Angle
+    double error = rotateSetpoint - imu.getGyroAngleZ();
+    double theoreticalPower = Math.min(
+      Constants.AUTONOMOUS_ROTATE_MAX_SPEED,
+      Math.sqrt(Math.abs(error)) / 5 + 0.35
+    );
+    theoreticalPower = Math.copySign(theoreticalPower, error);
+    double[] powers = new double[2];
+    powers[0] = theoreticalPower;
+    powers[1] = -theoreticalPower;
+    return powers;
+  }
 
   // Returns [distanceOutput, rotateOutput]
   private double[] getVisionOutput() {

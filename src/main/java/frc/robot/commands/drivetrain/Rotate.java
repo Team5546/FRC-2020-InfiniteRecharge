@@ -5,25 +5,28 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package frc.robot.commands.intake;
+package frc.robot.commands.drivetrain;
 
 import edu.wpi.first.wpilibj2.command.CommandBase;
-import frc.robot.subsystems.Intake;
+import frc.robot.subsystems.DriveTrain;
 
-public class SetIntakeSpeed extends CommandBase {
-  private Intake intake;
-  private double speed;
+public class Rotate extends CommandBase {
+  private DriveTrain driveTrain;
+  private double setpoint;
 
-  public SetIntakeSpeed(Intake _intake, double _speed) {
-    intake = _intake;
-    speed = _speed;
-    addRequirements(intake);
+  public Rotate(DriveTrain _driveTrain, double angle) {
+    driveTrain = _driveTrain;
+    setpoint = angle;
+
+    addRequirements(driveTrain);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    intake.setSpeed(speed);
+    driveTrain.setRotateSetpoint(setpoint);
+    driveTrain.resetRotation();
+    driveTrain.setState(DriveTrain.DriveTrainState.AUTONOMOUS_ROTATE);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
@@ -33,12 +36,12 @@ public class SetIntakeSpeed extends CommandBase {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    intake.setSpeed(0);
+    driveTrain.setState(DriveTrain.DriveTrainState.TELEOP);
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
-    return false;
+    return driveTrain.isOnRotateTarget();
   }
 }

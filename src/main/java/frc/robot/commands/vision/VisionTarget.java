@@ -23,7 +23,7 @@ public class VisionTarget extends CommandBase {
   private boolean onTarget = false;
   // private int rpmOffset = 133;
   private double m = 3.2508;
-  private double b = 3550.7;
+  private double b = 3750.7;
 
   private double initialBatteryVoltage = 0.0;
 
@@ -60,9 +60,11 @@ public class VisionTarget extends CommandBase {
       SmartDashboard.putString("VISION STATE", "ON TARGET");
       shooter.enablePID();
       double rpm = m * driveTrain.getDistance() + b;
-      double rpmOffset = rpm*.05;
-      double voltageAdjust = initialBatteryVoltage < 12.1 ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5) : 1.0;
-      double finalRpm = (-rpm-rpmOffset) * voltageAdjust;
+      double rpmOffset = rpm * .05;
+      double voltageAdjust = initialBatteryVoltage < 12.1
+        ? (initialBatteryVoltage < 11.8 ? 1.8 : 1.5)
+        : 1.0;
+      double finalRpm = (-rpm - rpmOffset) * voltageAdjust;
       shooter.setRPM(finalRpm);
       SmartDashboard.putNumber("RPM ERROR", shooter.getRPM() + rpm);
       if (Math.abs(shooter.getRPM() + rpm) < RPM_TOLERANCE) {
